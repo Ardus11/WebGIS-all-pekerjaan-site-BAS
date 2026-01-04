@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <title>PT.BAS</title>
+
+    <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+            display: none; /* Awalnya tersembunyi */
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+
+        /* Map Container */
+        #mapContainer {
+           width: 100%;
+           height: 600px;
+           border: 0px solid #ccc;
+           margin-top: 50px; 
+        }
+
+        /* Iframe Styling for Maps */
+      iframe {
+    width: 100%;
+    height: 700px;
+    border: none; /* Ganti frameborder dengan border: none */
+}
+
+
+        /* Navbar Styling */
+        .navbar {
+            backdrop-filter: blur(10px);
+            background-color: rgba(0, 0, 0, 0.8) !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: #fff !important;
+        }
+
+        .nav-link {
+            color: #fff !important;
+            padding: 8px 12px;
+             margin-left: 30px;
+        }
+
+        /* Dropdown Styling */
+        .dropdown-menu {
+            background-color: rgba(33, 37, 41, 0.9);
+            backdrop-filter: blur(5px);
+            position: absolute; /* Pastikan posisi absolut */
+            z-index: 1200; /* Naikkan z-index agar di atas elemen lain (lebih tinggi dari map/chart container) */
+            top: 100%; /* Posisi di bawah trigger */
+            left: 0; /* Mulai dari kiri trigger */
+            min-width: 100px; /* Lebar minimum */
+            max-height: 500px; /* Batasi tinggi untuk mencegah terlalu panjang dan terpotong */
+            overflow-y: auto; /* Tambahkan scroll vertikal jika dropdown panjang */
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Table & Chart Containers */
+        #chartContainer, #tableContainer {
+            display: none;
+            margin-top: 50px;
+        }
+
+        .nav-item .dropdown-menu {
+            background-color: rgba(33, 37, 41, 0.9);
+            backdrop-filter: blur(5px);
+            padding: 10px 0;
+            border-radius: 5px;
+            overflow: visible; /* Pastikan tidak terpotong oleh parent */
+            transform: translateY(0); /* Reset transform jika ada */
+        }
+
+        .nav-item .dropdown-menu .dropdown-item {
+            color: #fff !important;
+            padding: 6px 10px;
+            font-weight: 300;
+            transition: all 0.3s ease;
+            min-width: 200px;
+            white-space: nowrap;
+        }
+
+        .nav-item .dropdown-menu .dropdown-item:hover {
+            background-color: #63a370e1; /* Efek hover untuk highlight */
+            color: #fff;
+        }
+
+        .nav-item .dropdown-menu .dropdown-item:active {
+            background-color: #218838;
+        }
+
+        /* Chart & Table Containers */
+        .chart-container {
+            position: fixed;
+            background-color: white;
+            border: 2px solid rgb(0, 0, 0);
+            padding: 5px;
+            z-index: 1100;
+            box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            display: none;
+            max-height: 150vh;
+            overflow-y: auto;
+            top: 39%;
+            left: 40%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        .table-container {
+            position: fixed;
+            background-color: white;
+            border: 2px solid rgb(0, 0, 0);
+            padding: 5px;
+            z-index: 1100;
+            box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            display: none;
+            max-height: 150vh;
+            overflow-y: auto;
+            top: 46%;
+            left: 35%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            max-width: 900px;
+        }
+
+         .table-container table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Roboto', sans-serif;
+            font-size: 12px;
+            margin-top: 30px;
+        }
+        
+        .chart-close-btn, .table-close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(16, 16, 16, 0.453);
+            padding: 2px 10px;
+            border-radius: 5px;
+            font-size: 1.2rem;
+            color: #f8f5f5;
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        #tableTitle {
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+ /* Styling untuk login container (dipindahkan dari inline style di HTML) */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            position: fixed; /* Menggunakan fixed agar overlay */
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+        }
+
+        .login-box {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .login-box input[type="password"] {
+            padding: 10px;
+            margin: 10px 0;
+            width: 50%;
+            position: relative;
+        }
+
+        .login-box input[type="submit"] {
+            padding: 10px;
+            width: 30%;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+    </style>
+     <script type="text/javascript">
+        // Disable right-click and Ctrl+S
+        document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+        document.addEventListener('keydown', function(e) { if (e.ctrlKey && e.key === 's') e.preventDefault(); });
+        
+        function checkPassword(event) {
+            event.preventDefault();
+            var inputPassword = document.getElementById("password").value;
+            var correctPassword = "sbs123";
+            if (inputPassword === correctPassword) {
+                document.querySelector('.login-container').style.display = 'none';
+                document.getElementById('initialImageContainer').style.display = 'flex';
+                // Adjust initial image container position based on navbar height
+                var navbarHeight = document.querySelector('.navbar').offsetHeight;
+                document.getElementById('initialImageContainer').style.top = navbarHeight + 'px';
+                document.getElementById('initialImageContainer').style.height = 'calc(100vh - ' + navbarHeight + 'px)';
+                
+                document.getElementById('map').style.display = 'none'; // Ensure map is hidden initially
+            } else {
+                alert("Password Salah! Coba Lagi.");
+            }
+        }
+        </script>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top shadow-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="#">
+                <img src="images/LOGO - SBS_1.jpg" alt="Logo PT. BAS" style="height: 30px; margin-right: 10px;">
+                PT. SARANA BANGUN SELARAS
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <!-- Maps Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-globe me-1"></i>Maps
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <li><a class="dropdown-item" href="javascript:void(0)" id="replantingOption">Replanting</a></li>
+                            <li><a class="dropdown-item" href="javascript:void(0)" id="cuciparitOption">Cuci parit 2x2</a></li>
+                            <li><a class="dropdown-item" href="javascript:void(0)" id="bangunanAk3Option">Perumahan G2 AK3</a></li>
+                            <li><a class="dropdown-item" href="javascript:void(0)" id="bangunanAk5Option">Perumahan G2 AK5</a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Chart Option -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="chartDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-chart-bar me-1"></i>Chart
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="chartDropdown">
+                            <li><a class="dropdown-item" href="#" id="replantingChart">Replanting</a></li>
+                            <li><a class="dropdown-item" href="#" id="perumakanG2AK3Chart">Perumahan G2 AK3</a></li>
+                            <li><a class="dropdown-item" href="#" id="perumakanG2AK5Chart">Perumahan G2 AK5</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Table Option -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="tableDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-table me-1"></i>Tabel
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="tableDropdown">
+                            <li><a class="dropdown-item" href="#" id="replantingTable">Replanting</a></li>
+                            <li><a class="dropdown-item" href="#" id="perumakanG2AK3Table">Perumahan G2 AK3</a></li>
+                            <li><a class="dropdown-item" href="#" id="perumakanG2AK5Table">Perumahan G2 AK5</a></li>
+                        </ul>
+                    </li>
+                    <!-- Open File Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownFile" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-folder-open me-1"></i>Open File
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdownFile">
+                            <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1mirrQce3SMKDpHA8zOLrtx63kv3UuRpv/edit?usp=sharing&ouid=104117638527540736961&rtpof=true&sd=true" target="_blank">Replanting 2023.xls</a></li>
+                            <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1QJkFKm-BQO8EetArFvWI1uN-MAC22Iju/edit?usp=drive_link&ouid=104117638527540736961&rtpof=true&sd=true" target="_blank">Replanting 2024.xls</a></li>
+                            <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1dzDp7s2WOBg-sBprhhRUSroc_BBMI6jg/edit?usp=drive_link&ouid=104117638527540736961&rtpof=true&sd=true" target="_blank">Replanting 2025.xls</a></li>
+                            <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1zlK7EFBwWHo5r_Tha-Mh_OJ9sQF6IDIe/edit?usp=sharing&ouid=104117638527540736961&rtpof=true&sd=true" target="_blank">Kolam Limbah.xls</a></li>
+                            <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/1rYmT83QpfuGge8rilRhXIz87FH7dANGg/edit?usp=drive_link&ouid=104117638527540736961&rtpof=true&sd=true" target="_blank">Bangunan G2.xls</a></li>
+                            <li><a class="dropdown-item" href="https://docs.google.com/spreadsheets/d/10iwQd0uSFaX424M1y9F0dtEG-w6ldSC6/edit?usp=drive_link&ouid=104117638527540736961&rtpof=true&sd=true" target="_blank">Cuci Parit 2x2.xls</a></li>
+                            <li><a class="dropdown-item" href="https://drive.google.com/file/d/1W7_cLgPO-93tJukCg35bDoTctzAw5WIG/view?usp=drive_link" target="_blank">Peta Replanting.pdf</a></li>
+                        </ul>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+     <!-- Map Container -->
+    <div id="mapContainer"></div>
+
+    <!-- Chart Container -->
+    <div id="chartContainer" class="chart-container">
+        <canvas id="myBarChart"></canvas>
+        <button type="button" class="chart-close-btn" aria-label="Close" onclick="document.getElementById('chartContainer').style.display='none';">X</button>
+    </div>
+
+    <!-- Table Container -->
+    <div id="tableContainer" class="table-container">
+        <button type="button" class="table-close-btn" aria-label="Close" onclick="document.getElementById('tableContainer').style.display='none';">X</button>
+         <h3 id="tableTitle"></h3> <!-- Menambahkan judul tabel di sini -->
+        <div id="tableContent"></div>
+    </div>
+
+    <!-- Bootstrap JS (Needed for dropdown functionality) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    
+    
+
+    <script>
+         // URL untuk peta replanting dan kolam limbah
+            const replantingMapUrl = "https://ardus11.github.io/Replanting-Desember-2025/";
+            const cuciparitMapUrl = "https://ardus11.github.io/Cuci-parit-2x2/";
+            const bangunanAk3MapUrl = "https://ardus11.github.io/Bangunan-AK3/";
+            const bangunanAk5MapUrl = "https://ardus11.github.io/Bangunan-AK5/";
+
+             // Fungsi untuk menampilkan peta berdasarkan pilihan
+            function loadMap(mapUrl) {
+                mapContainer.style.display = 'block'; // Tampilkan map
+                chartContainer.style.display = 'none'; // Sembunyikan chart
+                tableContainer.style.display = 'none'; // Sembunyikan table
+
+                mapContainer.innerHTML = ''; // Hapus peta yang lama
+                let iframe = document.createElement("iframe");
+                iframe.src = mapUrl;
+                iframe.width = "100%";
+                iframe.height = "600px"; // Sesuaikan tinggi iframe
+                iframe.frameBorder = "0"; // Menghilangkan border iframe
+                mapContainer.appendChild(iframe);
+            }
+
+
+            // Event listener untuk Replanting dan Kolam Limbah
+            document.getElementById("replantingOption").addEventListener("click", function() {
+                loadMap(replantingMapUrl);
+            });
+
+            document.getElementById("cuciparitOption").addEventListener("click", function() {
+                loadMap(cuciparitMapUrl);
+            });
+
+            document.getElementById("bangunanAk3Option").addEventListener("click", function() {
+                loadMap(bangunanAk3MapUrl);
+            });
+
+            document.getElementById("bangunanAk5Option").addEventListener("click", function() {
+                loadMap(bangunanAk5MapUrl);
+            });
+
+            // Muat peta replanting secara default
+            mapContainer.style.display = 'none'; // Map tidak ditampilkan saat pertama kali
+
+
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const mapContainer = document.getElementById("mapContainer");
+            const tableTitle = document.getElementById("tableTitle");
+            const tableContainer = document.getElementById("tableContainer");
+            const chartContainer = document.getElementById("chartContainer");
+            
+
+            // Fungsi untuk menampilkan chart
+            function showChart(data, title) {
+                chartContainer.style.display = 'block';
+                tableContainer.style.display = 'none'; // Menyembunyikan tabel
+                updateChart(data, title);
+            }
+
+            // Fungsi untuk menampilkan tabel
+            function showTable(data, title) {
+                tableContainer.style.display = 'block';
+                chartContainer.style.display = 'none'; // Menyembunyikan chart
+                updateTable(data, title);
+            }
+
+            // Event listener untuk menu chart
+            document.getElementById("replantingChart").addEventListener("click", function() {
+                showChart(replantingData, "Replanting PT.BAS 2025 (sd Desember 2025)");
+            });
+
+            document.getElementById("perumakanG2AK3Chart").addEventListener("click", function() {
+                showChart(perumakanG2AK3Data, "Perumahan G2 AK3 (sd 03 Januari 2026)");
+            });
+
+            document.getElementById("perumakanG2AK5Chart").addEventListener("click", function() {
+                showChart(perumakanG2AK5Data, "Perumahan G2 AK5 (sd 03 Januari 2026)");
+            });
+
+
+            // Event listener untuk menu tabel
+            document.getElementById("replantingTable").addEventListener("click", function() {
+                showTable(replantingTable, "Replanting (sd Desember 2025)");
+            });
+
+            document.getElementById("perumakanG2AK3Table").addEventListener("click", function() {
+                showTable(perumakanG2AK3Table, "Perumahan G2 AK3 (sd 03 Januari 2026)");
+            });
+
+            document.getElementById("perumakanG2AK5Table").addEventListener("click", function() {
+                showTable(perumakanG2AK5Table, "Perumahan G2 AK5 (sd 03 Januari 2026)");
+            });
+
+             const replantingTable = [
+        ["No", "Pekerjaan", "Sat", "Realisasi(2023)", "Realisasi(2024)", "Rencana(2025)", "Realisasi(2025)", "Sisa (2025)", "BAPP (2025)", "CIP (2025)"],
+        ["1", "Chiping", "Pkk", "159,635", "153,810", "166,279", "162,544", "3,735", "162,544", "-"],
+        ["2", "Jalan Mr", "mtr", "8,345", "3,213", "11,940", "6,638", "5,320", "6,638","-"],
+        ["3", "Jalan Cr", "mtr", "22,021", "20,192", "25,279", "21,983", "3,296", "21,983", "-"],
+        ["4", "Jalan Selendang", "mtr", "15,256", "24,075", "32,669", "31,092", "1,577", "31,092","-"],
+        ["5", "Teras", "mtr", "686,762", "612,104", "780,080", "691,691", "88,389", "691,691", "-"],
+        ["6", "Lubang Tanam", "ttk", "132,674", "125,280", "189,448", "152,038", "37,410", "152,038", "-"],
+        ["7", "Buat Parit 1x1x1", "mtr", "38,091", "54,360", "76,438", "65,067", "11,371", "65,067", "-"],
+        ["8", "Buat Parit 2x2x1", "mtr", "-", "1,457", "-", "-", "-", "-", "-"],
+        ["9", "Tapak Timbun", "Pkk", "-", "4,673", "-", "-", "-", "-", "-"]
+    ];
+    const perumakanG2AK3Table = [
+        ["No", "Item Pekerjaan", "Bobot (%)", "Realisasi(%)", "Sisa(%)", "BAPP(%)", "CIP (%)"],
+        ["1", "Pekerjaan Persiapan", "5,15", "4,75", "0,40", "4,74", "0,43"],
+        ["2", "Pemasangan Pondasi", "9,90", "9,90", "0,00", "9,90", "0,00"],
+        ["3", "Pekerjaan Struktur Balok", "14,09", "14,02", "0,07", "13,99", "0,03"],
+        ["4", "Pekerjaan Dinding", "14,33", "12,79", "1,54", "12,51", "0,28"],
+        ["5", "Pekerjaan Pintu dan Jendela", "12,43", "8,55", "3,88", "7,66", "0,89"],
+        ["6", "Pekerjaan Atap", "11,56", "9,97", "1,58", "8,91", "1,07"],
+        ["7", "Pekerjaan Lantai", "12,67", "7,41", "5,26", "4,96", "2,45"],
+        ["8", "Pekerjaan Pengecetan", "5,53", "0,47", "5,06", "0,07", "0,41"],
+        ["9", "Pekerjaan Plafond", "5,33", "2,75", "2,58", "1,55", "1,20"],
+        ["10", "Pekerjaan Sanitasi", "2,54", "1,62", "0,92", "1,20", "0,41"],
+        ["11", "Pekerjaan Meja Dapur", "1,02", "0,60", "0,41", "0,18", "0,43"],
+        ["12", "Pekerjaan Parit Dreinase", "1,13", "0,59", "0,54", "0,27", "0,32"],
+        ["13", "Pekerjaan Instalasi Listrik", "1,65", "1,03", "0,62", "0,44", "0,59"],
+        ["14", "Pekerjaan Instalasi Air", "2,68", "0,47", "2,21", "0,03", "0,44"],
+        [" ", "Total", "100", "74,93", "25,07", "66,39", "8,55"],
+    ];
+      const perumakanG2AK5Table = [
+        ["No", "Item Pekerjaan", "Bobot (%)", "Realisasi(%)", "Sisa(%)", "BAPP(%)", "CIP (%)"],
+        ["1", "Pekerjaan Persiapan", "5,15", "5,15", "0,00", "5,15", "0,00"],
+        ["2", "Pemasangan Pondasi", "9,90", "9,90", "0,00", "9,90", "0,00"],
+        ["3", "Pekerjaan Struktur Balok", "14,09", "14,09", "0,00", "14,09", "0,00"],
+        ["4", "Pekerjaan Dinding", "14,33", "14,33", "0,00", "14,33", "0,00"],
+        ["5", "Pekerjaan Pintu dan Jendela", "12,43", "12,43", "0,00", "12,43", "0,00"],
+        ["6", "Pekerjaan Atap", "11,56", "11,56", "0,00", "11,56", "0,00"],
+        ["7", "Pekerjaan Lantai", "12,67", "12,67", "0,00", "12,67", "0,00"],
+        ["8", "Pekerjaan Pengecetan", "5,53", "5,53", "0,00", "5,53", "0,00"],
+        ["9", "Pekerjaan Plafond", "5,33", "5,33", "0,00", "5,33", "0,00"],
+        ["10", "Pekerjaan Sanitasi", "2,54", "2,54", "0,00", "2,54", "0,00"],
+        ["11", "Pekerjaan Meja Dapur", "1,02", "1,02", "0,00", "1,02", "0,00"],
+        ["12", "Pekerjaan Parit Dreinase", "1,13", "1,13", "0,00", "1,13", "0,00"],
+        ["13", "Pekerjaan Instalasi Listrik", "1,65", "1,65", "0,00", "1,65", "0,00"],
+        ["14", "Pekerjaan Instalasi Air", "2,68", "2,68", "0,00", "2,68", "0,00"],
+        [" ", "Total", "100", "100", "0,00", "100", "0,00"],
+    ];
+             // Inisialisasi Chart.js (dari kode asli Anda)
+                        const replantingData = {
+                        labels: ['Chiping','Chiping (Ha)', 'Jalan Mr', 'Jalan Cr', 'Jalan Selendang', 'Teras', 'Lubang Tanam', 'Buat Parit 1x1x1'],
+                        datasets: [
+                            {
+                                label: 'RENCANA',
+                                data: [166279, 1393, 11940, 25279, 32669, 780080, 189448, 76438],
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'REALISASI',
+                                data: [162544, 1393, 6638, 21983, 31092, 691691, 152038, 65067],
+                                backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                                borderColor: 'rgba(255, 159, 64, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'BAPP',
+                                data: [162544, 1393, 6638, 21983, 31092, 691691, 152038, 65067],
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'CIP',
+                                data: [0, 0, 0, 0, 0, 0, 0, 0],
+                                backgroundColor: 'rgba(43, 206, 86, 0.2)',
+                                borderColor: 'rgba(255, 206, 86, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'SISA RENCANA',
+                                data: [3735, 0, 5302, 3296, 1577, 88389, 37410,11371],
+                                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                borderColor: 'rgba(153, 102, 255, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    };
+                     const perumakanG2AK3Data = {
+                        labels: ['Persiapan','Pondasi', 'Struktur Balok', 'Dinding', 'Pintu&jendela', 'Atap', 'Lantai', 'Pengecetan', 'Plafond', 'Sanitasi', 'Meja Dapur', 'Parit Drainase', 'Instalasi Listrik', 'Instalasi Air'],
+                        datasets: [
+                            {
+                                label: 'RENCANA (%)',
+                                data: [5.15, 9.90, 14.09, 14.33, 12.43, 11.56, 12.67, 5.53, 5.33, 2.54, 1.02, 1.13, 1.65, 2.68],
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'REALISASI (%)',
+                                data: [4.74, 9.90, 14.02, 12.79, 8.55, 9.97, 7.41, 0.47, 2.75, 1.62, 0.60, 0.59, 1.03, 0.47],
+                                backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                                borderColor: 'rgba(255, 159, 64, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'BAPP (%)',
+                                data: [4.74, 9.90, 13.99, 12.51, 7.66, 8.91, 4.96, 0.07, 1.55, 1.20, 0.18, 0.27, 0.44, 0.03],
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'CIP (%)',
+                                data: [0.00, 0.00, 0.03, 0.28, 0.89, 1.07, 2.45, 0.41, 1.20, 0.41, 0.43, 0.32, 0.59, 0.44],
+                                backgroundColor: 'rgba(43, 206, 86, 0.2)',
+                                borderColor: 'rgba(255, 206, 86, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'SISA RENCANA (%)',
+                                data: [0.40, 0.00, 0.07, 1.54, 3.88, 1.58, 5.26, 5.06, 2.58, 0.92, 0.41, 0.54, 0.62, 2.21],
+                                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                borderColor: 'rgba(153, 102, 255, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    };
+                          const perumakanG2AK5Data = {
+                        labels: ['Persiapan','Pondasi', 'Struktur Balok', 'Dinding', 'Pintu&jendela', 'Atap', 'Lantai', 'Pengecetan', 'Plafond', 'Sanitasi', 'Meja Dapur', 'Parit Drainase', 'Instalasi Listrik', 'Instalasi Air'],
+                        datasets: [
+                            {
+                                label: 'RENCANA',
+                                data: [5.15, 9.90, 14.09, 14.33, 12.43, 11.56, 12.67, 5.53, 5.33, 2.54, 1.02, 1.13, 1.65, 2.68],
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'REALISASI',
+                                data: [5.15, 9.90, 14.09, 14.33, 12.43, 11.56, 12.67, 5.53, 5.33, 2.54, 1.02, 1.13, 1.65, 2.68],
+                                backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                                borderColor: 'rgba(255, 159, 64, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'BAPP',
+                                data: [5.15, 9.90, 14.09, 14.33, 12.43, 11.56, 12.67, 5.53, 5.33, 2.54, 1.02, 1.13, 1.65, 2.68],
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'CIP',
+                                data: [0.00, 0.00, 0.01, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+                                backgroundColor: 'rgba(43, 206, 86, 0.2)',
+                                borderColor: 'rgba(255, 206, 86, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'SISA RENCANA',
+                                data: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+                                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                borderColor: 'rgba(153, 102, 255, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+
+                    };
+                    var ctx = document.getElementById('myBarChart');
+                    var myBarChart; // Deklarasikan di luar agar bisa diakses
+
+                    if (ctx) {
+                    myBarChart = new Chart(ctx.getContext('2d'), {
+                    type: 'bar',
+                    data: replantingData,
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display:true,
+                                Text: 'Progres Replanting PT.BAS 2025 (sd November 2025)',
+                                align: 'center',
+                                padding:{
+                                    top: 20,
+                                    bottom: 10
+                                },
+                                font: {
+                                    size: 16,
+                                    weight: 'bold'
+                                }
+                            },
+                            legend: {
+                            position: 'bottom',   // <-- pindahkan legend ke bawah
+                            labels: {
+                            padding: 20,      // beri jarak antar label
+                            boxWidth: 20
+                                }
+                            },
+
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'end',
+                                color: 'black',
+                                offset: -2 ,
+                                clamp:true,
+                                font: {
+                                    size: 10
+                                },
+                                rotation: 270,
+                                formatter: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    plugins: [ChartDataLabels]
+                });
+            }
+
+
+            // Fungsi untuk memperbarui chart
+            function updateChart(newData, newTitle) {
+                if (myBarChart) {
+                    myBarChart.data = newData;
+                    myBarChart.options.plugins.title.text = newTitle;
+                    myBarChart.update();
+                }
+            }
+
+            // Fungsi untuk memperbarui tabel
+            function updateTable(newData, titleText) {
+                if (tableTitle) {
+                    tableTitle.textContent = titleText;
+                }
+
+                const tableContent = document.getElementById("tableContent");
+                const table = document.createElement("table");
+                table.className = "table table-bordered table-striped";
+                const tbody = document.createElement("tbody");
+
+                newData.forEach(row => {
+                    const tr = document.createElement("tr");
+
+                    if (Array.isArray(row)) {
+                        row.forEach(cell => {
+                            const td = document.createElement("td");
+                            td.textContent = cell;
+                            tr.appendChild(td);
+                        });
+                    } else if (typeof row === "object") {
+                        Object.values(row).forEach(cell => {
+                            const td = document.createElement("td");
+                            td.textContent = cell;
+                            tr.appendChild(td);
+                        });
+                    }
+
+                    tbody.appendChild(tr);
+                });
+
+                table.appendChild(tbody);
+                tableContent.innerHTML = "";
+                tableContent.appendChild(table);
+            }
+        });
+        
+    </script>
+</body>
+<!-- Login Container -->
+    <div class="login-container">
+        <div class="login-box">
+            <h3>
+                <img src="images/LOGO - SBS_1.jpg" alt="Logo SBS" style="width: 70px; vertical-align: middle; margin-right: 10px;">
+                Masukkan Password untuk Akses WebGIS
+            </h3>
+            <form onsubmit="checkPassword(event)">
+                <input type="password" id="password" placeholder="Masukkan Password" required>
+                <input type="submit" value="Login">
+            </form>
+        </div>
+</html>
